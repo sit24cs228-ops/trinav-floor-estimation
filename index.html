@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Chennai Building Floor Estimation | Trinav Space Technology</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f1117;
+      color: #fff;
+    }
+
+    /* HEADER */
+    .header {
+      background: linear-gradient(135deg, #1a1f2e, #0d3b6e);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid #2563eb;
+      z-index: 1000;
+      position: relative;
+    }
+    .header-left h1 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #60a5fa;
+      letter-spacing: 0.5px;
+    }
+    .header-left p {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+    .header-right {
+      font-size: 12px;
+      color: #64748b;
+      text-align: right;
+    }
+    .header-right span {
+      color: #34d399;
+      font-weight: 600;
+    }
+
+    /* LAYOUT */
+    .container {
+      display: flex;
+      height: calc(100vh - 60px);
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 280px;
+      background: #1e2330;
+      border-right: 1px solid #2d3448;
+      overflow-y: auto;
+      padding: 16px;
+      flex-shrink: 0;
+    }
+
+    .sidebar h3 {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #60a5fa;
+      margin-bottom: 12px;
+      border-bottom: 1px solid #2d3448;
+      padding-bottom: 8px;
+    }
+
+    /* LEGEND */
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      padding: 8px 10px;
+      background: #252a3a;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+      border: 1px solid transparent;
+    }
+    .legend-item:hover { background: #2d3448; }
+    .legend-item.active { border-color: #60a5fa; }
+
+    .legend-color {
+      width: 18px;
+      height: 18px;
+      border-radius: 3px;
+      flex-shrink: 0;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    .legend-label { font-size: 13px; color: #cbd5e1; }
+    .legend-count {
+      margin-left: auto;
+      font-size: 11px;
+      background: #374151;
+      padding: 2px 6px;
+      border-radius: 10px;
+      color: #9ca3af;
+    }
+
+    /* STATS */
+    .stat-box {
+      background: #252a3a;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 10px;
+      border-left: 3px solid #2563eb;
+    }
+    .stat-box .stat-value {
+      font-size: 22px;
+      font-weight: 700;
+      color: #60a5fa;
+    }
+    .stat-box .stat-label {
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 2px;
+    }
+
+    /* LAYER TOGGLES */
+    .toggle-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      background: #252a3a;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+    .toggle-label { font-size: 13px; color: #cbd5e1; }
+    .toggle-switch {
+      position: relative;
+      width: 36px;
+      height: 20px;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #374151;
+      border-radius: 20px;
+      transition: 0.3s;
+    }
+    .toggle-slider:before {
+      content: "";
+      position: absolute;
+      height: 14px; width: 14px;
+      left: 3px; bottom: 3px;
+      background: white;
+      border-radius: 50%;
+      transition: 0.3s;
+    }
+    input:checked + .toggle-slider { background: #2563eb; }
+    input:checked + .toggle-slider:before { transform: translateX(16px); }
+
+    /* MAP */
+    #map {
+      flex: 1;
+      height: 100%;
+    }
+
+    /* INFO POPUP */
+    .info-panel {
+      background: #1e2330;
+      border: 1px solid #2d3448;
+      border-radius: 8px;
+      padding: 12px 16px;
+      min-width: 180px;
+      font-size: 13px;
+      color: #cbd5e1;
+    }
+    .info-panel b { color: #60a5fa; }
+
+    /* Leaflet popup override */
+    .leaflet-popup-content-wrapper {
+      background: #1e2330 !important;
+      border: 1px solid #2563eb !important;
+      border-radius: 8px !important;
+      color: #cbd5e1 !important;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
+    }
+    .leaflet-popup-tip { background: #1e2330 !important; }
+    .leaflet-popup-content { margin: 12px 16px !important; }
+
+    .popup-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #60a5fa;
+      margin-bottom: 8px;
+      border-bottom: 1px solid #2d3448;
+      padding-bottom: 6px;
+    }
+    .popup-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+      gap: 16px;
+    }
+    .popup-key { color: #64748b; font-size: 12px; }
+    .popup-val { color: #e2e8f0; font-size: 12px; font-weight: 600; }
+    .floor-badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-top: 6px;
+    }
+
+    .loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #1e2330;
+      border: 1px solid #2563eb;
+      border-radius: 12px;
+      padding: 24px 32px;
+      text-align: center;
+      z-index: 9999;
+      color: #60a5fa;
+      font-size: 15px;
+    }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid #2d3448;
+      border-top-color: #2563eb;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>🏙️ Chennai Building Floor Estimation</h1>
+    <p>DEM + OpenStreetMap Analysis | Trinav Space Technology</p>
+  </div>
+  <div class="header-right">
+    Study Area: Chennai, Tamil Nadu<br>
+    Method: <span>Area-Based Classification</span>
+  </div>
+</div>
+
+<div class="container">
+  <div class="sidebar">
+
+    <h3>📊 Statistics</h3>
+    <div class="stat-box">
+      <div class="stat-value" id="total-count">—</div>
+      <div class="stat-label">Total Buildings</div>
+    </div>
+    <div class="stat-box" style="border-left-color:#34d399">
+      <div class="stat-value" style="color:#34d399">5</div>
+      <div class="stat-label">Floor Categories</div>
+    </div>
+
+    <h3 style="margin-top:16px">🏢 Floor Legend</h3>
+    <div class="legend-item" onclick="filterFloor('1 Floor')">
+      <div class="legend-color" style="background:#00bcd4"></div>
+      <span class="legend-label">1 Floor</span>
+      <span class="legend-count">&lt;100 m²</span>
+    </div>
+    <div class="legend-item" onclick="filterFloor('2 Floors')">
+      <div class="legend-color" style="background:#9c27b0"></div>
+      <span class="legend-label">2 Floors</span>
+      <span class="legend-count">100–300 m²</span>
+    </div>
+    <div class="legend-item" onclick="filterFloor('4 Floors')">
+      <div class="legend-color" style="background:#ff9800"></div>
+      <span class="legend-label">4 Floors</span>
+      <span class="legend-count">300–600 m²</span>
+    </div>
+    <div class="legend-item" onclick="filterFloor('6 Floors')">
+      <div class="legend-color" style="background:#f44336"></div>
+      <span class="legend-label">6 Floors</span>
+      <span class="legend-count">600–1000 m²</span>
+    </div>
+    <div class="legend-item" onclick="filterFloor('8 Floors')">
+      <div class="legend-color" style="background:#4caf50"></div>
+      <span class="legend-label">8 Floors</span>
+      <span class="legend-count">&gt;1000 m²</span>
+    </div>
+    <div class="legend-item" onclick="filterFloor(null)" style="margin-top:4px">
+      <div class="legend-color" style="background:#60a5fa"></div>
+      <span class="legend-label">Show All</span>
+    </div>
+
+    <h3 style="margin-top:16px">🗺️ Layers</h3>
+    <div class="toggle-item">
+      <span class="toggle-label">Satellite Basemap</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="tog-satellite" checked onchange="toggleSatellite(this)">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="toggle-item">
+      <span class="toggle-label">Buildings</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="tog-buildings" checked onchange="toggleBuildings(this)">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="toggle-item">
+      <span class="toggle-label">Study Area Boundary</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="tog-boundary" checked onchange="toggleBoundary(this)">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <h3 style="margin-top:16px">ℹ️ About</h3>
+    <div style="font-size:12px; color:#64748b; line-height:1.6">
+      Buildings extracted from <b style="color:#94a3b8">OpenStreetMap</b>. Floor count estimated using footprint area thresholds. DEM sourced from <b style="color:#94a3b8">OpenTopography (SRTM)</b>.<br><br>
+      <b style="color:#94a3b8">Intern:</b> Vaibhav Jayan<br>
+      <b style="color:#94a3b8">Org:</b> Trinav Space Technology<br>
+      <b style="color:#94a3b8">Date:</b> June 2026
+    </div>
+
+  </div>
+
+  <div id="map"></div>
+</div>
+
+<div class="loading" id="loading">
+  <div class="spinner"></div>
+  Loading Chennai Building Data...
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+
+// ── MAP INIT ──────────────────────────────────────────────
+const map = L.map('map', { zoomControl: true }).setView([13.09, 80.275], 15);
+
+const satelliteLayer = L.tileLayer(
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  { attribution: 'Esri World Imagery', maxZoom: 19 }
+).addTo(map);
+
+const osmLayer = L.tileLayer(
+  'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  { attribution: '© OpenStreetMap', maxZoom: 19, opacity: 0 }
+);
+
+// ── COLOUR MAP ────────────────────────────────────────────
+const floorColors = {
+  '1 Floor':  '#00bcd4',
+  '2 Floors': '#9c27b0',
+  '4 Floors': '#ff9800',
+  '6 Floors': '#f44336',
+  '8 Floors': '#4caf50',
+};
+
+function getColor(floor) {
+  return floorColors[floor] || '#607d8b';
+}
+
+function styleFeature(feature) {
+  const floor = feature.properties.Floor_Est || feature.properties.floor_est || '1 Floor';
+  return {
+    fillColor: getColor(floor),
+    fillOpacity: 0.75,
+    color: '#ffffff',
+    weight: 0.8,
+    opacity: 0.9
+  };
+}
+
+// ── POPUP ─────────────────────────────────────────────────
+function onEachFeature(feature, layer) {
+  const p = feature.properties;
+  const floor = p.Floor_Est || p.floor_est || 'Unknown';
+  const area  = p.Area_m2   || p.area_m2   || '—';
+  const color = getColor(floor);
+
+  layer.bindPopup(`
+    <div class="popup-title">🏢 Building Info</div>
+    <div class="popup-row">
+      <span class="popup-key">Estimated Floors</span>
+      <span class="popup-val">${floor}</span>
+    </div>
+    <div class="popup-row">
+      <span class="popup-key">Footprint Area</span>
+      <span class="popup-val">${area ? Number(area).toFixed(1) + ' m²' : '—'}</span>
+    </div>
+    <div class="popup-row">
+      <span class="popup-key">OSM ID</span>
+      <span class="popup-val">${p.osm_id || p.id || '—'}</span>
+    </div>
+    <div>
+      <span class="floor-badge" style="background:${color}22; color:${color}; border:1px solid ${color}">
+        ${floor}
+      </span>
+    </div>
+  `);
+
+  layer.on('mouseover', function() {
+    layer.setStyle({ fillOpacity: 1, weight: 2, color: '#fff' });
+  });
+  layer.on('mouseout', function() {
+    buildingLayer.resetStyle(layer);
+  });
+}
+
+// ── SIMULATED BUILDING DATA (Chennai study area) ──────────
+// Replace this with your real GeoJSON export from QGIS
+function generateBuildings() {
+  const center = [13.090, 80.275];
+  const buildings = [];
+  const floorRules = [
+    { floor: '1 Floor',  color: '#00bcd4', minArea: 30,   maxArea: 99  },
+    { floor: '2 Floors', color: '#9c27b0', minArea: 100,  maxArea: 299 },
+    { floor: '4 Floors', color: '#ff9800', minArea: 300,  maxArea: 599 },
+    { floor: '6 Floors', color: '#f44336', minArea: 600,  maxArea: 999 },
+    { floor: '8 Floors', color: '#4caf50', minArea: 1000, maxArea: 2000},
+  ];
+
+  // Weighted distribution matching Chennai low-rise character
+  const weights = [50, 30, 12, 5, 3];
+  let id = 1;
+
+  for (let i = 0; i < 320; i++) {
+    const lat = center[0] + (Math.random() - 0.5) * 0.022;
+    const lng = center[1] + (Math.random() - 0.5) * 0.028;
+
+    // Weighted floor pick
+    const rand = Math.random() * 100;
+    let cumul = 0, rule = floorRules[0];
+    for (let w = 0; w < weights.length; w++) {
+      cumul += weights[w];
+      if (rand < cumul) { rule = floorRules[w]; break; }
+    }
+
+    const area = rule.minArea + Math.random() * (rule.maxArea - rule.minArea);
+    const size = Math.sqrt(area) * 0.000009; // approx degrees
+
+    // Make buildings near main road (lng ~80.275) taller
+    const distFromRoad = Math.abs(lng - 80.275);
+    let finalRule = rule;
+    if (distFromRoad < 0.005 && Math.random() > 0.5) {
+      finalRule = floorRules[Math.min(floorRules.length - 1, floorRules.indexOf(rule) + 1)];
+    }
+
+    const w = size * (0.7 + Math.random() * 0.6);
+    const h = size * (0.7 + Math.random() * 0.6);
+
+    buildings.push({
+      type: 'Feature',
+      properties: {
+        osm_id: `way/${1000000 + id}`,
+        Floor_Est: finalRule.floor,
+        Area_m2: area.toFixed(2),
+        id: id++
+      },
+      geometry: {
+        type: 'Polygon',
+        coordinates: [[
+          [lng,     lat    ],
+          [lng + w, lat    ],
+          [lng + w, lat + h],
+          [lng,     lat + h],
+          [lng,     lat    ]
+        ]]
+      }
+    });
+  }
+  return { type: 'FeatureCollection', features: buildings };
+}
+
+// ── STUDY AREA BOUNDARY ───────────────────────────────────
+const studyBoundary = L.rectangle(
+  [[13.079, 80.261], [13.101, 80.289]],
+  { color: '#60a5fa', weight: 2, fill: false, dashArray: '6 4' }
+);
+
+// ── LOAD BUILDINGS ────────────────────────────────────────
+let buildingLayer;
+let allFeatures;
+let activeFilter = null;
+
+function loadBuildings(geojson) {
+  allFeatures = geojson;
+  document.getElementById('total-count').textContent = geojson.features.length;
+
+  buildingLayer = L.geoJSON(geojson, {
+    style: styleFeature,
+    onEachFeature: onEachFeature
+  }).addTo(map);
+
+  studyBoundary.addTo(map);
+  document.getElementById('loading').style.display = 'none';
+}
+
+// Try to load real data first, fall back to demo
+fetch('buildings.geojson')
+  .then(r => { if (!r.ok) throw new Error('no file'); return r.json(); })
+  .then(data => loadBuildings(data))
+  .catch(() => {
+    // Use demo data
+    setTimeout(() => loadBuildings(generateBuildings()), 800);
+  });
+
+// ── FILTER BY FLOOR ───────────────────────────────────────
+function filterFloor(floor) {
+  if (!buildingLayer || !allFeatures) return;
+  activeFilter = floor;
+
+  map.removeLayer(buildingLayer);
+
+  const filtered = floor
+    ? { type: 'FeatureCollection', features: allFeatures.features.filter(f =>
+        (f.properties.Floor_Est || f.properties.floor_est) === floor) }
+    : allFeatures;
+
+  buildingLayer = L.geoJSON(filtered, {
+    style: styleFeature,
+    onEachFeature: onEachFeature
+  }).addTo(map);
+
+  // Highlight active legend item
+  document.querySelectorAll('.legend-item').forEach(el => el.classList.remove('active'));
+  if (floor) {
+    const labels = ['1 Floor','2 Floors','4 Floors','6 Floors','8 Floors'];
+    const idx = labels.indexOf(floor);
+    if (idx >= 0) document.querySelectorAll('.legend-item')[idx].classList.add('active');
+  }
+}
+
+// ── LAYER TOGGLES ─────────────────────────────────────────
+function toggleSatellite(cb) {
+  if (cb.checked) map.addLayer(satelliteLayer);
+  else map.removeLayer(satelliteLayer);
+}
+function toggleBuildings(cb) {
+  if (!buildingLayer) return;
+  if (cb.checked) map.addLayer(buildingLayer);
+  else map.removeLayer(buildingLayer);
+}
+function toggleBoundary(cb) {
+  if (cb.checked) studyBoundary.addTo(map);
+  else map.removeLayer(studyBoundary);
+}
+
+</script>
+</body>
+</html>
