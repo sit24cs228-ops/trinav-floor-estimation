@@ -238,6 +238,41 @@
       margin: 0 auto 12px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* DISTRIBUTION */
+    .dist-item {
+      margin-bottom: 10px;
+    }
+    .dist-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+    .dist-label-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .dist-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dist-label { font-size: 12px; color: #cbd5e1; }
+    .dist-meta { font-size: 11px; color: #64748b; }
+    .dist-bar-track {
+      height: 5px;
+      background: #2d3448;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .dist-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.6s ease;
+    }
   </style>
 </head>
 <body>
@@ -318,6 +353,12 @@
         <input type="checkbox" id="tog-boundary" checked onchange="toggleBoundary(this)">
         <span class="toggle-slider"></span>
       </label>
+    </div>
+
+    <h3 style="margin-top:16px">📈 Distribution</h3>
+    <div id="distribution-panel">
+      <!-- filled dynamically -->
+      <div style="font-size:11px;color:#64748b">Loading...</div>
     </div>
 
     <h3 style="margin-top:16px">ℹ️ About</h3>
@@ -496,7 +537,39 @@ function generateBuildings() {
   return { type: 'FeatureCollection', features: buildings };
 }
 
-// ── STUDY AREA BOUNDARY ───────────────────────────────────
+// ── DISTRIBUTION PANEL ────────────────────────────────────
+function renderDistribution(geojson) {
+  const floorOrder = ['2 Floors','4 Floors','1 Floor','6 Floors','8 Floors'];
+  const counts = {};
+  floorOrder.forEach(f => counts[f] = 0);
+  geojson.features.forEach(f => {
+    const lbl = getFloorLabel(f.properties);
+    if (counts[lbl] !== undefined) counts[lbl]++;
+  });
+
+  const total = geojson.features.length || 1;
+  const panel = document.getElementById('distribution-panel');
+  panel.innerHTML = floorOrder.map(floor => {
+    const count = counts[floor];
+    const pct = Math.round((count / total) * 100);
+    const color = floorColors[floor] || '#607d8b';
+    return `
+      <div class="dist-item">
+        <div class="dist-header">
+          <div class="dist-label-wrap">
+            <div class="dist-dot" style="background:${color}"></div>
+            <span class="dist-label">${floor}</span>
+          </div>
+          <span class="dist-meta">${count} · ${pct}%</span>
+        </div>
+        <div class="dist-bar-track">
+          <div class="dist-bar-fill" style="width:${pct}%; background:${color}"></div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+
 const studyBoundary = L.rectangle(
   [[13.004, 80.253], [13.014, 80.263]],
   { color: '#60a5fa', weight: 2, fill: false, dashArray: '6 4' }
@@ -517,6 +590,7 @@ function loadBuildings(geojson) {
   }).addTo(map);
 
   studyBoundary.addTo(map);
+  renderDistribution(geojson);
   document.getElementById('loading').style.display = 'none';
 }
 
