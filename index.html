@@ -342,7 +342,7 @@
 <script>
 
 // ── MAP INIT ──────────────────────────────────────────────
-const map = L.map('map', { zoomControl: true }).setView([13.09, 80.275], 15);
+const map = L.map('map', { zoomControl: true }).setView([13.0088, 80.2580], 15);
 
 const satelliteLayer = L.tileLayer(
   'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
@@ -498,7 +498,7 @@ function generateBuildings() {
 
 // ── STUDY AREA BOUNDARY ───────────────────────────────────
 const studyBoundary = L.rectangle(
-  [[13.079, 80.261], [13.101, 80.289]],
+  [[13.004, 80.253], [13.014, 80.263]],
   { color: '#60a5fa', weight: 2, fill: false, dashArray: '6 4' }
 );
 
@@ -528,15 +528,10 @@ fetch('./buildings.geojson')
   })
   .then(data => {
     console.log('Loaded real data:', data.features.length, 'buildings');
-    // Re-center map to actual data bounds
-    if (data.features.length > 0) {
-      const firstCoord = data.features[0].geometry.coordinates[0][0][0];
-      if (firstCoord) map.setView([firstCoord[1], firstCoord[0]], 15);
-    }
     loadBuildings(data);
   })
   .catch(err => {
-    console.warn('Could not load buildings.geojson:', err, '— using demo data');
+    console.warn('Falling back to demo data:', err);
     setTimeout(() => loadBuildings(generateBuildings()), 800);
   });
 
