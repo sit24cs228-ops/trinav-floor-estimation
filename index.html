@@ -520,12 +520,23 @@ function loadBuildings(geojson) {
   document.getElementById('loading').style.display = 'none';
 }
 
-// Try to load real data first, fall back to demo
-fetch('buildings.geojson')
-  .then(r => { if (!r.ok) throw new Error('no file'); return r.json(); })
-  .then(data => loadBuildings(data))
-  .catch(() => {
-    // Use demo data
+// Load real buildings.geojson
+fetch('./buildings.geojson')
+  .then(r => {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  })
+  .then(data => {
+    console.log('Loaded real data:', data.features.length, 'buildings');
+    // Re-center map to actual data bounds
+    if (data.features.length > 0) {
+      const firstCoord = data.features[0].geometry.coordinates[0][0][0];
+      if (firstCoord) map.setView([firstCoord[1], firstCoord[0]], 15);
+    }
+    loadBuildings(data);
+  })
+  .catch(err => {
+    console.warn('Could not load buildings.geojson:', err, '— using demo data');
     setTimeout(() => loadBuildings(generateBuildings()), 800);
   });
 
