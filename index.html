@@ -363,12 +363,29 @@ const floorColors = {
   '8 Floors': '#4caf50',
 };
 
+// Convert numeric floor_est to label
+function getFloorLabel(props) {
+  // Try text field first
+  if (props.Floor_Est) return props.Floor_Est;
+  // Try numeric field (your real data uses floor_est as number)
+  const num = props.floor_est;
+  if (num !== undefined && num !== null) {
+    const n = parseInt(num);
+    if (n <= 1)  return '1 Floor';
+    if (n <= 2)  return '2 Floors';
+    if (n <= 4)  return '4 Floors';
+    if (n <= 6)  return '6 Floors';
+    return '8 Floors';
+  }
+  return '1 Floor';
+}
+
 function getColor(floor) {
   return floorColors[floor] || '#607d8b';
 }
 
 function styleFeature(feature) {
-  const floor = feature.properties.Floor_Est || feature.properties.floor_est || '1 Floor';
+  const floor = getFloorLabel(feature.properties);
   return {
     fillColor: getColor(floor),
     fillOpacity: 0.75,
@@ -381,8 +398,8 @@ function styleFeature(feature) {
 // ── POPUP ─────────────────────────────────────────────────
 function onEachFeature(feature, layer) {
   const p = feature.properties;
-  const floor = p.Floor_Est || p.floor_est || 'Unknown';
-  const area  = p.Area_m2   || p.area_m2   || '—';
+  const floor = getFloorLabel(p);
+  const area  = p.Area_m2 || p.area_m2 || '—';
   const color = getColor(floor);
 
   layer.bindPopup(`
@@ -521,7 +538,7 @@ function filterFloor(floor) {
 
   const filtered = floor
     ? { type: 'FeatureCollection', features: allFeatures.features.filter(f =>
-        (f.properties.Floor_Est || f.properties.floor_est) === floor) }
+        getFloorLabel(f.properties) === floor) }
     : allFeatures;
 
   buildingLayer = L.geoJSON(filtered, {
