@@ -242,7 +242,14 @@
     /* DISTRIBUTION */
     .dist-item {
       margin-bottom: 10px;
+      cursor: pointer;
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      transition: background 0.2s, border-color 0.2s;
     }
+    .dist-item:hover { background: #252a3a; }
+    .dist-item.active { background: #252a3a; border-color: #60a5fa; }
     .dist-header {
       display: flex;
       align-items: center;
@@ -299,6 +306,13 @@
     <div class="stat-box" style="border-left-color:#34d399">
       <div class="stat-value" style="color:#34d399">5</div>
       <div class="stat-label">Floor Categories</div>
+    </div>
+    <div class="stat-box" id="filter-stat-box" style="border-left-color:#60a5fa; display:none;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+        <div class="stat-value" id="filter-count" style="color:#60a5fa">—</div>
+        <button onclick="clearFilter()" style="background:#374151; border:none; color:#94a3b8; font-size:11px; padding:2px 8px; border-radius:10px; cursor:pointer;">✕ Clear</button>
+      </div>
+      <div class="stat-label" id="filter-label">Selected Floor</div>
     </div>
 
     <h3 style="margin-top:16px">🏢 Floor Legend</h3>
@@ -554,7 +568,7 @@ function renderDistribution(geojson) {
     const pct = Math.round((count / total) * 100);
     const color = floorColors[floor] || '#607d8b';
     return `
-      <div class="dist-item">
+      <div class="dist-item" id="dist-${floor.replace(' ','_')}" onclick="filterFloor('${floor}')">
         <div class="dist-header">
           <div class="dist-label-wrap">
             <div class="dist-dot" style="background:${color}"></div>
@@ -633,6 +647,37 @@ function filterFloor(floor) {
     const idx = labels.indexOf(floor);
     if (idx >= 0) document.querySelectorAll('.legend-item')[idx].classList.add('active');
   }
+
+  // Highlight active distribution row
+  document.querySelectorAll('.dist-item').forEach(el => el.classList.remove('active'));
+  if (floor) {
+    const distEl = document.getElementById('dist-' + floor.replace(' ', '_'));
+    if (distEl) distEl.classList.add('active');
+  }
+
+  // Update filter stat box
+  const statBox = document.getElementById('filter-stat-box');
+  const filterCount = document.getElementById('filter-count');
+  const filterLabel = document.getElementById('filter-label');
+  if (floor) {
+    const count = filtered.features.length;
+    const color = floorColors[floor] || '#60a5fa';
+    filterCount.textContent = count;
+    filterCount.style.color = color;
+    statBox.style.borderLeftColor = color;
+    filterLabel.textContent = floor + ' — filtered view';
+    statBox.style.display = 'block';
+  } else {
+    statBox.style.display = 'none';
+  }
+}
+
+function clearFilter() {
+  filterFloor(null);
+  document.querySelectorAll('.legend-item').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.dist-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('filter-stat-box').style.display = 'none';
+  activeFilter = null;
 }
 
 // ── LAYER TOGGLES ─────────────────────────────────────────
